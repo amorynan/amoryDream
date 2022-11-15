@@ -1,5 +1,5 @@
 Nov. 12-14th . 2022
-1. [] DataStructure(Array):Prefix skill
+1. [x] DataStructure(Array):Prefix skill
 
    leetcode:
  
@@ -25,3 +25,9 @@ Nov. 12-14th . 2022
       make starrocks run locally
 
       SQL (1. 三值运算；2. union / union all / or 3. not in / NULL 4. join)
+
+Nov. 15th . 2022
+1. [] Summary: Prefix skill (30min)
+2. [] DataStructure(Array):Diff skill + Sliding window
+
+3. [] SQL: (basic knowledge(filter / udf / subquery / standard join / stored procedure / transaction))
