@@ -5,8 +5,8 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="936abf31-b839-4bed-a839-a5d2284b2c58" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/category/algorithm/bit.md" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/category/os/data_type.md" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/category/algorithm/search_common.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/TODO.md" beforeDir="false" afterPath="$PROJECT_DIR$/TODO.md" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
