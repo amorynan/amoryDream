@@ -28,6 +28,12 @@ Nov. 12-14th . 2022
 
 Nov. 15th . 2022
 1. [] Summary: Prefix skill (30min)
-2. [] DataStructure(Array):Diff skill + Sliding window
+2. [x] DataStructure(Array):Diff skill + Binary search 
 
-3. [] SQL: (basic knowledge(filter / udf / subquery / standard join / stored procedure / transaction))
+3. [x] SQL: (basic knowledge(filter / udf / subquery / standard join / stored procedure / transaction))
+
+Nov. 16th . 2022
+1. [] DataStructure(Array):Sliding window
+
+2. [] 梳理一下 数据库 更加高级的 技能，（来源于康神的CMU 和 blog），Important!!! NOT MESS!!!
+3. [] SQL
