@@ -33,7 +33,12 @@ Nov. 15th . 2022
 3. [x] SQL: (basic knowledge(filter / udf / subquery / standard join / stored procedure / transaction))
 
 Nov. 16th . 2022
-1. [] DataStructure(Array):Sliding window
+1. [x] DataStructure(Array):Sliding window
 
-2. [] 梳理一下 数据库 更加高级的 技能，（来源于康神的CMU 和 blog），Important!!! NOT MESS!!!
+2. [x] 梳理一下 数据库 更加高级的 技能，（来源于康神的CMU 和 blog），Important!!! NOT MESS!!!
 3. [] SQL
+
+Nov. 17th . 2022
+1. [] 梳理 prefix skill / binary search / sliding window  
+
+2. [] CMU database 大学 ppt

@@ -16,3 +16,11 @@ func statisticalOneInNumberbit(num int) int {
    }
 }
 ```
+```go
+// 判断数组下标的存在性质： 判断 num(int) 值 二进制 x 位上是否有1
+res = (num >> x) & 1 (res 是 bool值) 
+// 设置 num(int) 某位x 上 为1 
+res |= 1 << x
+// 设置 num(int) 某位x 上 为0
+res &^ = 1 << x
+```
