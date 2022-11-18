@@ -126,13 +126,13 @@ code 略，so easy
 Status[j, i) = sum[j, i) % k == 0 && i-j>=2
 设: prefixSum[x] = sum[0, x) 
 则：sum[j, i) % k == 0 && i-j>=2
-==> (prefixSum[0, i) - prefixSum[0, j)) % k == 0 && i-j>=2
-==> prefixSum[0, i) % k == prefixSum[0, j) % k && i-j>=2
+==> (prefixSum[i] - prefixSum[j]) % k == 0 && i-j>=2
+==> prefixSum[i] % k == prefixSum[j] % k && i-j>=2
 这里困难可能就是在于 如何 求的j 存在与否了吧，与👆不同的是，上面只需要求的 i 下满足某个条件就行，这里
-是需要求得 [j, i) 满足的条件, 并且i-j>=2 也就是说，在能很快得到 prefixSum[0, i) 的情况咋很快得到 prefixSum[0, j) 结合
+是需要求得 [j, i) 满足的条件, 并且i-j>=2 也就是说，在能很快得到 prefixSum[i] 的情况咋很快得到 prefixSum[j] 结合
 满足上面的式子, 当然hashMap 就很好想到了
 
-那hashMap 存什么，做什么，我们需要快速找到是j ，那 value 一定是true or false, key 其实就是 prefixSum[0, j) % k,
+那hashMap 存什么，做什么，我们需要快速找到是j ，那 value 一定是true or false, key 其实就是 prefixSum[j] % k,
 最后map 判断就行了, 这里再讲一个小技巧，查map 的过程是向前看的过程，可以边求prefix， 边查map，这个技巧如果你要问我
 怎么想到的，我只能说，优化的思想一定要有，其次就是熟能生巧，别的没了
 
@@ -258,11 +258,41 @@ func longestWPI(hours []int) int {
     return res
 }
 
-func max(a, b int) int {
-if a > b {
-return a
+// desc stack helper 
+func longestWPI(hours []int) int {
+    prefixSum := make([]int, len(hours)+1)
+    descStack := make([]int, 0)
+    prefixSum[0] = 0
+    descStack = append(descStack, 0)
+    for idx, it := range hours {
+        if it > 8 {
+            prefixSum[idx+1] = prefixSum[idx]+1
+        }else {
+            prefixSum[idx+1] = prefixSum[idx]-1
+        }
+        if prefixSum[idx+1] < prefixSum[descStack[len(descStack)-1]] {
+            descStack = append(descStack, idx+1)
+        }
+    }
+    res := 0
+    for i := len(prefixSum)-1; i >= 0; i -- {
+        // if descStack peek outdate? pop it or not
+        if descStack[len(descStack)-1] >= i {  
+            descStack = descStack[:len(descStack)-1]
+        }
+        // now loop get the desc stack to make right 
+        for k := len(descStack)-1; k >= 0 && prefixSum[descStack[k]] < prefixSum[i] ; k -- {
+            res = max(res, (i-descStack[k]))
+        }
+    }
+    return res
 }
-return b
+
+func max(a, b int) int {
+    if a > b {
+        return a
+    }
+	return b
 }
 
 
