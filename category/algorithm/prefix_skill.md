@@ -272,12 +272,77 @@ return b
 //路径 不需要从根节点开始，也不需要在叶子节点结束，但是路径方向必须是向下的（只能从父节点到子节点）。
 相当于求 树 的某个 区间的和， 采用遍历解决即可
 
-// 求数组中的某个区间和满足在[x, y] 之间
+// 求数组中的某个区间和满足在[x, y] 之间的个数
 // 这题有意思的地方在于 状态的满足式子 有两个 sum[j, i) >= x && sum[j, i) <= y 跟上面的只有一个满足条件稍显不同
 // 所以这道题的关键是 prefixSum[i] 求的后 ，如何求 j 是满足
-//   prefixSum[0, i) - prefixSum[0, j) >= x && prefixSum[0, i) - prefixSum[0, j) <= y ?
-//   
+// 设： prefixSum[x] = sum[0,x)
+// 则 prefixSum[i] - prefixSum[j] >= x && prefixSum[i]- prefixSum[j] <= y (i>j)
+//   ==> prefixSum[j] <= prefixSum[i] - x && prefixSum[j] >= prefixSum[i] - y (i>j,i=0,1,2,3...)
+// 设 a[i] = prefixSum[i] - x, b =  prefixSum[i] - y 
+// 则 prefixSum[j] <= a[i] && prefixSum[j] >= b[i] ( 0<=j<i )
+//   换个思路想 前面的prefixSum[0, i) 如果 有序，是不是就比较简单的求解呢？所以 能想到一个 方案是能 边遍历这个前缀和
+//   边做到前面也有序莫？符合这个模样的排序算法熟悉的话，其实就比较容易往归并上套，因为merge过程，分界线左右就是有序的，
+//   而这里希望i 左边有序.
 
+func f( nums []int, x, y int) int {
+	prefixSum := make([]int, len(nums)+1)
+	
+	for idx, it := range nums {
+		prefixSum[idx+1] += it 
+    }
+	cnt := 0
+	// sort_merge prefixSum 
+	var sort func(l , r int) 
+	var merge func(l, m , r int) []int 
+	
+	
+	merge = func(l, m , r int) []int{
+		// m == i
+		for m < r {
+			for prefixSum[m] - prefixSum[l] < x {
+				l ++ 
+            } 
+			for prefixSum[m] - prefixSum[l] <= y {
+			 // 满足条件
+				cnt ++ 
+				l++
+            }
+			m++
+        }
+		
+		
+	    res := make([]int, r-l+1)
+		curIdx := 0
+		mt := m
+		for l < mt || m < r {
+		   if prefixSum[l] < prefixSum[m] {
+			   res[curIdx] = prefixSum[l]
+			   l ++ 
+           }else {
+			   res[curIdx] = prefixSum[m]
+			   m ++
+           }
+		   curIdx ++
+        }
+		
+		for l < mt {
+		  res[curIdx] = prefixSum[l]
+		  l++
+        }
+		for m < r {
+			res[curIdx] = prefixSum[m]
+        }
+		return res
+    }
+	sort = func(l, r int) {
+	    m := int(uint(l+r) >> 1)
+		sort(l, m)
+		sort(m+1, r)
+		prefixSum[l:r] = merge(l, m, r) 
+    } 
+	
+	
+}
 ```
 
 
