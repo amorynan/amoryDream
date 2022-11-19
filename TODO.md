@@ -39,6 +39,14 @@ Nov. 16th . 2022
 3. [] SQL
 
 Nov. 17th . 2022
-1. [] 梳理 prefix skill / binary search / sliding window  
+1. [x] 梳理 prefix skill / binary search / sliding window  
 
-2. [] CMU database 大学 ppt
+2. [x] CMU database 大学 ppt
+
+
+Nov. 19th . 2022
+1. [] 梳理 binary search 
+2. [] 单调栈
+3. [] 总结三篇 专业上的性能优化 
+       （用SIMD指令优化**存储层**的热点代码｜向量化导入的优化｜查询的优化）
+4. [] CMU database Multi-Version Concurrency Control 
