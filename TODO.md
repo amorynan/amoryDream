@@ -46,7 +46,9 @@ Nov. 17th . 2022
 
 Nov. 19th . 2022
 1. [] 梳理 binary search 
-2. [] 单调栈
+2. [x] 单调栈 
+     移掉 K 位数字(402) 需要注意的移动的规则
+
 3. [] 总结三篇 专业上的性能优化 
        （用SIMD指令优化**存储层**的热点代码｜向量化导入的优化｜查询的优化）
 4. [] CMU database Multi-Version Concurrency Control 

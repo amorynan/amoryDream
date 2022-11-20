@@ -1,7 +1,7 @@
 存储介质：
 1. registry 在cpu 中
 
-![img_1.png](img_1.png)
+![img_1.png](../imgs/img_1.png)
 
 2. memory:  SRAM(Static Random Access Mem) / DRAM (Dynamic ...)
    SRAM 可以在主板/卡槽/集成在CPU上，DRAM 主存
@@ -11,9 +11,9 @@
 
 HDD : 机械硬盘，有扇区和旋转指针头
 
-![img_2.png](img_2.png)
+![img_2.png](../imgs/img_2.png)
 
-![img_3.png](img_3.png)
+![img_3.png](../imgs/img_3.png)
 
 a. 盘有多个， 磁道在每个盘面有多个，扇区在每个磁道有多个
 
@@ -23,10 +23,10 @@ c. 磁头可以根据盘面的旋转选择扇区
 
 SSD : 固态硬盘，没有扇区，没有风扇，访问速度接近内存
 
-![img_5.png](img_5.png)
-![img_7.png](img_7.png)
-![img_8.png](img_8.png)
-![img_4.png](img_4.png)
+![img_5.png](../imgs/img_5.png)
+![img_7.png](../imgs/img_7.png)
+![img_8.png](../imgs/img_8.png)
+![img_4.png](../imgs/img_4.png)
 
 a. 是闪存的一种实现方式
 
@@ -41,4 +41,4 @@ c. 需要注意 SSD 写放大的问题
 
 HHD : 混合硬盘 （没啥了解）
 
-![img.png](img.png)
+![img.png](../imgs/img.png)
