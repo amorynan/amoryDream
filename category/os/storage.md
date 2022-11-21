@@ -3,6 +3,17 @@
 
 ![img_1.png](../imgs/img_1.png)
 
+
+* 寄存器	   16位	32位	64位
+* 累加寄存器	AX	EAX	RAX
+* 基址寄存器	BX	EBX	RBX
+* 计数寄存器	CX	ECX	RCX
+* 数据寄存器	DX	EDX	RDX
+* 堆栈基指针	BP	EBP	RBP
+* 变址寄存器	SI	ESI	RSI
+* 堆栈顶指针	SP	ESP	RSP
+* 指令寄存器	IP	EIP	RIP
+
 2. memory:  SRAM(Static Random Access Mem) / DRAM (Dynamic ...)
    SRAM 可以在主板/卡槽/集成在CPU上，DRAM 主存
 

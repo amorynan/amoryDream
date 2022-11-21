@@ -1,16 +1,17 @@
 binary search func
-```go
-// binary search : 
-1 . find a single number
-2 . find left_bound  
-3 . find right_bound
+
+1. [x]  find a single number
+2. [x]  find left_bound  
+3. [x]  find right_bound
 
 主要思想: 
-	
-Code:
-	
-	
-Practices:
-	240. 搜索二维矩阵 II 
+	是通过一种 压缩 合法区间, 这个合法区间 可以是各种满足的条件，最简单的就是满足找到某个值即可, 稍微比较复杂就是找到满足条件的左边界或者
+右边界。
 
-```
+Practices:
+
+* 找到 K 个最接近的元素 (658)
+* 搜索旋转排序数组, 分别思考有重复数据和没有重复数据的情况(33)
+* 爱吃香蕉的珂珂(875)
+* 在 D 天内送达包裹的能力(1011)
+* 分割数组的最大值（410）
