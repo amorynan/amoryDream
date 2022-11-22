@@ -7,7 +7,8 @@
    1. key points: 
       1. every node has itself next pointer array to access next node ;
       2. how many next pointers dose every node has is random, which is also called level  
-   2. operations: 
+   2. operations:
+        
       1. build:
       
       make a sentinel always maintain a pointer to first listNode in every level linkedList 
@@ -21,7 +22,22 @@
       3. insert : search first with recording first node in suitable range space from high level to 0, 
                   if 0 level does not exist this data, just insert, but if exist , insertion will choose to u,   
                   and then IMPORT STUFF is make a random for this data max level, max level is the main factor to make ur skipList balanced,
-                  if I want log(n) , every level may has (1/2)^n nodes， every node could has (1/2) chance to choose itself will exist in this level, 
+                  if I want log2(n) ,but how I should make skip steps ? why here is 2 ? 
+              
+      ```go
+            if every node in level 0 has (1/x) to access to max level
+            if I want log2(n) that means the level cnt is log2(n) , so every single node to max level should "
+                (1/x) * (1/x) *...* (1/x) here are log2(n) multiplied , and level 0 has n node , so n node to must has access max level
+             here goes: 
+                      n * (1/x)^(log2(n)) = 1
+            ==> (1/x)^(log2(n)) = 1/n 
+            ==> x^(log2(n)) = n
+			--> if b = log2(n) 
+            ==> n = 2^b && x^b = 2^b 
+            ==> x == 2
+       ```
+      defa        
+                  every level may has (1/2)^n nodes， every node could has (1/2) chance to choose itself will exist in this level, n
                   but If I want log3(n), every level may has (1/3)^n nodes, every node could has (1/3) chance to choose itself will exist in this level.     
                   then from low level to high level 
                   to insert node with linking first node and first node's next node  
