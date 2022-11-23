@@ -32,7 +32,7 @@
                       n * (1/x)^(log2(n)) = 1
             ==> (1/x)^(log2(n)) = 1/n 
             ==> x^(log2(n)) = n
-			--> if b = log2(n) 
+            --> if b = log2(n) 
             ==> n = 2^b && x^b = 2^b 
             ==> x == 2
        ```
@@ -42,5 +42,14 @@
                   then from low level to high level 
                   to insert node with linking first node and first node's next node  
       4. delete 
+   Hashing:
+      maintain an array to keep index tracking for key, and value is in array, but here are many stuffs to think about
+      such as array size, conflicts for key, and search time .  
+      
+      CuckooHashing :
+   
+   So may here something is simply to do : Status explore: Filter
+   But something is more tricky : inverted index
 
+4. 
 
