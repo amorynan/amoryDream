@@ -5,11 +5,16 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="936abf31-b839-4bed-a839-a5d2284b2c58" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/category/algorithm/back_track.md" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/category/db/dbs" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/main.go" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/category/os/cpu.md" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/category/os/img.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/category/os/img_1.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/category/os/img_2.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/category/os/img_3.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/category/os/img_4.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/category/os/img_5.png" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/category/db/explore.md" beforeDir="false" afterPath="$PROJECT_DIR$/category/db/explore.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/category/os/storage.md" beforeDir="false" afterPath="$PROJECT_DIR$/category/os/storage.md" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />

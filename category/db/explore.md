@@ -48,8 +48,9 @@
       
       CuckooHashing :
    
-   So may here something is simply to do : Status explore: Filter
+   So may here something is simply to do : Status explore: Filter(Bitmap, RoaringBitMap, BloomFilter, CuckooFilter)
    But something is more tricky : inverted index
 
-4. 
+4. Index ：
+ 为了发挥出多核处理器的性能优势，索引结构需要设计更加优秀的并发控制机制
 

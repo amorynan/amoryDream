@@ -1,5 +1,5 @@
 存储介质：
-1. registry 在cpu 中
+1. CPU registry 
 
 ![img_1.png](../imgs/img_1.png)
 
@@ -14,10 +14,13 @@
 * 堆栈顶指针	SP	ESP	RSP
 * 指令寄存器	IP	EIP	RIP
 
-2. memory:  SRAM(Static Random Access Mem) / DRAM (Dynamic ...)
-   SRAM 可以在主板/卡槽/集成在CPU上，DRAM 主存
+2. CPU cache 
+![img_5.png](img_5.png)
 
-3. disk : HDD / SSD / HHD
+3. memory:  SRAM(Static Random Access Mem,主要是 CPU cache) / DRAM (Dynamic ...)
+   SRAM L1，L2 L3 cache , ，DRAM 主存
+
+4. disk : HDD / SSD / HHD
 
 
 HDD : 机械硬盘，有扇区和旋转指针头
