@@ -2,22 +2,33 @@ Here are Advanced skills for database
 
 T O P I C S
 
-[x] Concurrency Control
+1. [ ]  Concurrency Control
+2. [ ] 
+3. [ ]  Indexing
+4. [ ] 
+5. [ ]  Storage Models, Compression
+6. [ ] 
+7. [ ]  Parallel Join Algorithms
+8. [ ] 
+9. [ ]  Networking Protocols
+10. [ ] 
+11. [ ]  Logging & Recovery Methods
+12. [ ] 
+13. [ ]  Query Optimization, Execution, Compilation
 
-[x] Indexing
+Latch VS LOCK
+LOCK basically a txn level which has high level in database 
+it can make logical stuff during time and make for txn rollback
 
-1. [x] [] Storage Models, Compression
-
-[] Parallel Join Algorithms
-
-[] Networking Protocols
-
-[] Logging & Recovery Methods
-
-[] Query Optimization, Execution, Compilation
+Latch is as short as he can 
+implementation: 
+1/BLOCKING OS mutex(std::mutex-> p_thread_mutex(futex=), os latch and userspace latch combination) 
+2/Test And Set Spin Latch (std::atomic<T>, cpu non-friendly and os non-friendly)
+3/Read And Write Latch (read / write queue and counters)
 
 
-[] B+/Bw/palm tree concurrent control protocol implementation:
+
+B+/Bw/palm tree concurrent control protocol implementation:
 ```sql
 read op: 
     
@@ -89,5 +100,28 @@ GC (epoch | time-travel(version store))
 
 SESSION : VectorWise & Compile
 
-SESSION : Parallel Hash-Join && Sort-Merge Join
+SESSION : Parallel Join (Hashing && Sort-Merge && NestLoop)
+SESSION Architecture:  Hash-Join && Sort-Merge Join
+1. [ ] 1.hashing-join 
+2. [ ] 2.sort-merge-join
+3. [ ] 3.compare
+4. [ ] 4.choose decision
+
+Join decision goals:
+
+1/Minimal Sync [No Latch]
+2/Minimal Memory Access Cost 
+[Ensure data is always in local work thread && Reuse data when it in cpu cache,How? 
+Random-access(lookup: partition data fit cache size+TLB) OR Non-Random-access(scan: cluster data into cache line, 
+do more operators)]
+
+hash-join:
+1/hash function: 
+    key: fault & 
+2/hash scheme
+3/parallelism how ?
+
+
+
+
 
