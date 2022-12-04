@@ -53,8 +53,8 @@ Nov. 19th . 2022
        （用SIMD指令优化**存储层**的热点代码｜向量化导入的优化｜查询的优化）
 4. [x] CMU database SIMD
 
-Dec. 1th . 2022
-1. [] 搭环境等（用于iresearch 调试 以及 starrocks pr 的使用）
+Dec. 3th . 2022
+1. [x] 搭环境 测试一个POC和下面的task（用于iresearch 调试 以及 starrocks pr 的使用）
 2. [] (High level) 输出一篇查询优化器
-3. [] (Algorithm) 一个 dp or BackTrack 
-4. [] (DataStructure) labuladong (双端队列)
+3. [x] (Algorithm) 一个 dp or BackTrack 
+4. [x] (DataStructure) labuladong (stack)
