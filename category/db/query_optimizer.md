@@ -10,17 +10,103 @@ SQL ->> QUERY-OPTIMIZER ->> PLAN(s) ->> MACHINE(multi core|mem|disk)
    ![img.png](../imgs/sqls.png)
    SQL 是给人看的，LogicPlan 是给 Optimizer 看的，Physical plan 是给 Executor 看的， 最后生成的机器码是给机器看的。
 
-   SQL 从网络层Socket以二进制数据载体来了之后, DB 会拥有一个 SqlParser 类通过用当下比较流行的 ANTLR 插件生成对应的 Statement（ 
-大体是经过 Lexer , Syntactic 形成一个 DB 中的类对象 Statement, eg.```SELECT * FROM test WHERE test.id = 1```   对应了 QueryStatement，涉及到SQL 编译原理，不展开）
-同时，每一种Statement的相关语义上的check等操作，对于一些种类的Statement 会通过 StmtExecutor 生成对应种类的 ExecPlan. 之后就交给 StorageEngine 去执行, 重点来了
-是否有一个最好的```执行计划```生成？
+   大致上工业界都是让 SQL 从网络层Socket以二进制数据载体来了之后, DB 会拥有一个 SqlParser 类通过用当下比较流行的 ANTLR 插件生成对应的 Statement（ 
+大体是经过 Lexer（词法解析器） , Syntactic（语法解析器） 形成一个 DB 中的类对象 Statement, eg.```SELECT * FROM test WHERE test.id = 1```  被解析完就封装到了 QueryStatement class 对象中去，
+这涉及到SQL 编译原理，不展开） 同时，每一种Statement的相关语义上的check等操作，那么问题就来了，Statement 的粒度在哪？拥有了很多不同操作粒度的Statement 之后咋交给机器看执行呢？说白了就是database如何```高效```
+的和OS交流，才能让OS 将存储在memory 或者 cache 或者 disk(ssd/hdd) 吐给database，进而展示给用户看。
+举一个具体的场景，QueryStatement 的生成, 自己感受下 ：
 
-   1. best ExecPlan (maybe ?!)的生成
-      首先有必要预先普及一下一些名词，因为对于DB一些了解不深的人来说，看到这些词汇其实会比较摸不着头脑，就当作字典的开始目录吧，其次我会针对StarRocks 的source-code 进行一些概念的解读，
+ANTLR 定义 ：(当我们写的sql 语句可以通过模式匹配到👇的一些组合的话，就在代码中可以通过 Parser 得到一个QueryStatement obj)
+```mysql
+explainDesc
+: (DESC | DESCRIBE | EXPLAIN) (LOGICAL | VERBOSE | COSTS)?
+    ;
+
+queryStatement
+    : explainDesc? queryBody outfile?;
+    
+queryBody
+: withClause? queryNoWith
+    ;
+    
+-- #with query 是一种在query 阶段定义的一种别名视图， 原始sql可以长这样
+-- #-- define CTE:
+-- # WITH Cost_by_Month AS
+-- # (SELECT campaign_id AS campaign,
+-- #        TO_CHAR(created_date, 'YYYY-MM') AS month,
+-- #        SUM(cost) AS monthly_cost
+-- # FROM marketing
+-- # WHERE created_date BETWEEN NOW() - INTERVAL '3 MONTH' AND NOW()
+-- # GROUP BY 1, 2
+-- # ORDER BY 1, 2)
+-- # 
+-- # -- use CTE in subsequent query:
+-- # SELECT campaign, avg(monthly_cost) as "Avg Monthly Cost"
+-- # FROM Cost_by_Month
+-- # GROUP BY campaign
+-- # ORDER BY campaign
+    
+withClause
+: WITH commonTableExpression (',' commonTableExpression)*
+    ;
+
+queryNoWith
+:queryTerm (ORDER BY sortItem (',' sortItem)*)? (limitElement)?
+    ;
+
+queryTerm
+: queryPrimary                                                             #queryTermDefault
+| left=queryTerm operator=INTERSECT setQuantifier? right=queryTerm         #setOperation
+| left=queryTerm operator=(UNION | EXCEPT | MINUS)
+    setQuantifier? right=queryTerm                                         #setOperation
+;
+
+queryPrimary
+: querySpecification                           #queryPrimaryDefault
+| subquery                                     #subqueryPrimary
+;
+
+outfile
+: INTO OUTFILE file=string fileFormat? properties?
+    ;
+```
+```javascript
+// parse to build query statement 
+public ParseNode visitQueryStatement(StarRocksParser.QueryStatementContext context) {
+    QueryRelation queryRelation = (QueryRelation) visit(context.queryBody());
+    QueryStatement queryStatement = new QueryStatement(queryRelation);
+    if (context.outfile() != null) {
+        queryStatement.setOutFileClause((OutFileClause) visit(context.outfile()));
+    }
+
+    if (context.explainDesc() != null) {
+        queryStatement.setIsExplain(true, getExplainType(context.explainDesc()));
+    }
+
+    return queryStatement;
+}
+
+
+public class QueryStatement extends StatementBase {
+    private final QueryRelation queryRelation;
+
+    // represent the "INTO OUTFILE" clause
+    protected OutFileClause outFileClause;
+
+    public QueryStatement(QueryRelation queryRelation) {
+        this.queryRelation = queryRelation;
+    }
+```
+
+   
+2. best ExecPlan (maybe ?!)的生成
+      首先有必要预先普及一下一些名词，因为对于DB一些了解不深的人来说，看到一些db人常说的词汇其实会比较摸不着头脑，就当作字典的开始目录吧，其次我会针对StarRocks 的source-code 进行一些概念的解读，
    用于参照工业界的OLAP Optimizer 的实现
       ```sql
-      关系代数(algebra)
-      Operator:(一种运算能力,关系代数的算子：https://zh.wikipedia.org/wiki/%E5%85%B3%E7%B3%BB%E4%BB%A3%E6%95%B0_(%E6%95%B0%E6%8D%AE%E5%BA%93))
+      Tuple : wiki 上解释为从字段名到特定值的有限元素序列,eg. (name: amory, age: 25, cute: true) 作为一个tuple:表示25岁且可爱的amory 
+      Relation Algebra(关系代数) : a set of fundamental operations to retrieve and manipulate tuples (检索和管理tuples 的一组操作集合)  
+      
+      Operator:(一种运算方式,关系代数的算子：https://zh.wikipedia.org/wiki/%E5%85%B3%E7%B3%BB%E4%BB%A3%E6%95%B0_(%E6%95%B0%E6%8D%AE%E5%BA%93))
        大体上我们常见分类有：
                "集合运算"：并集，差集，并集，笛卡尔积
                "投影 (π)"
@@ -39,12 +125,17 @@ SQL ->> QUERY-OPTIMIZER ->> PLAN(s) ->> MACHINE(multi core|mem|disk)
       ![img.png](../imgs/operators.drawio.png)
 
 ```sql
-    Expression: 至少拥有一个 关系代数的 表达式 
-        eg.[A ⋈ B ⋈ C]
-            
+    Expression: 关系代数的表达式，包括Operator ，在db 中其实我们经常把expression 看作一棵树的形式, 出自于我自己的感受，其一是树从某种
+        程度上可以表示一定的顺序性，其二是在程序中递归树比起递归数组来说容易
+        eg.[A ⋈ (B ⋈ C)](logical) : 表示 B 和 C 连接 再和 A 连接 
+            ==> 如果指定一些物理上需要的具体操作，比如是merge join，hash join，还是nestloop join，就可以这样写
+            [A(seq) ⋈ (NLJ) (B(idx) ⋈(HJ) C(seq))] : 表示 【索引scan B】 和 【顺序scan C】 以 【hash join 方式连接】 再和 【顺序scanA】 以 【nestloop join 连接】
+    由⬆️可见[A ⋈ (B ⋈ C)]这样的一个式子其实就可以让机器按照我们想要的数据组合方式吐给我们了，也被称之为一个logic plan 和 physcal plan, 
+        同时也可以明白，一个逻辑上的表达式可以和多个物理上的表达式相互对应，也就是一个逻辑上的plan 可以拥有多个物理上的plan, 响应而生就有
+        Rule 概念的产生，因为Operator 算子也不是瞎转换的吧
 ```
- 
     
+众说周知，人与人说话都是一门艺术，嫁接到database，他与os 交流也是一门艺术哈哈哈（有点扩展了）
 
 Velox(presto/spark):
 DB2(OLTP):
