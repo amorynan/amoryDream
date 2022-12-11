@@ -123,16 +123,58 @@ public class QueryStatement extends StatementBase {
       ```
       StarRocks 中定义的Operator , 大致有👇
       ![img.png](../imgs/operators.drawio.png)
+        physical Op 是对于 logical Op 的一种具体算法的的实现， 比如 logical join 的 physical 实现有sort merge join 或者 hash join
 
+```Query Tree: 至少包含一个logical operator 的查询计划树,他可以长这样```
+![img.png](../imgs/col1.png)
 ```sql
-    Expression: 关系代数的表达式，包括Operator ，在db 中其实我们经常把expression 看作一棵树的形式, 出自于我自己的感受，其一是树从某种
-        程度上可以表示一定的顺序性，其二是在程序中递归树比起递归数组来说容易
-        eg.[A ⋈ (B ⋈ C)](logical) : 表示 B 和 C 连接 再和 A 连接 
-            ==> 如果指定一些物理上需要的具体操作，比如是merge join，hash join，还是nestloop join，就可以这样写
-            [A(seq) ⋈ (NLJ) (B(idx) ⋈(HJ) C(seq))] : 表示 【索引scan B】 和 【顺序scan C】 以 【hash join 方式连接】 再和 【顺序scanA】 以 【nestloop join 连接】
-    由⬆️可见[A ⋈ (B ⋈ C)]这样的一个式子其实就可以让机器按照我们想要的数据组合方式吐给我们了，也被称之为一个logic plan 和 physcal plan, 
-        同时也可以明白，一个逻辑上的表达式可以和多个物理上的表达式相互对应，也就是一个逻辑上的plan 可以拥有多个物理上的plan, 响应而生就有
-        Rule 概念的产生，因为Operator 算子也不是瞎转换的吧
+ Execution plan: 通过一个具体的物理算子实现 query tree 上的 logical op的计划
+```
+![img_1.png](../imgs/col2.png)
+```sql
+    其实可以看到不管是 querytree 还是 execution plan 都是一种抽象的树，一个node + inputs(children),所以我们使用一个Expression
+    Expression: 关系代数的表达式，包括Operator 和 这个Operator 的 inputs(也就是tree 的children)
+```
+StarRocks 中 OptExpression class 就是Expression 的表示
+```javascript
+/**
+ * An expression is an operator with zero or more input expressions.
+ * We refer to an expression as logical or physical
+ * based on the type of its operator.
+ * <p>
+ * Logical Expression: (A ⨝ B) ⨝ C
+ * Physical Expression: (AF ⨝HJ BF) ⨝NLJ CF
+ */
+public class OptExpression {
+    // Expression 拥有的两个概念
+    private Operator op;
+    private List<OptExpression> inputs;
+    
+    //public class LogicalProperty {
+        // Operator's output columns
+        // private ColumnRefSet outputColumns;
+        // The tablets num of left most scan node
+        // private int leftMostScanTabletsNum;
+        // The flag for execute upon less than or equal one tablet
+        // private boolean isExecuteInOneTablet;
+        //} // 保存一些当前operator 需要输出列的信息， 后面两个是后续算法优化需要的一些标志和额外信息
+    
+    private LogicalProperty property;
+    private Statistics statistics;
+    private double cost = 0;
+    // The number of plans in the entire search space，this parameter is valid only when cbo_use_nth_exec_plan configured.
+    // Default value is 0
+    private int planCount = 0;
+}
+```
+```sql  
+不过新的问题很快就来了 (A ⨝ B) ⨝ C 和 (B ⨝ A) ⨝ C 这两个 OptExpression 看着它两 不相似莫
+如果这两个logical OptExpression 的输出结果是一样的，那我们从逻辑上就判断他们是相等的，相等的OptExpression 用同一个表达式表示就是Group 
+Group: logically equivalent expressions 
+    就拿👆的两个OptExpression 举例，
+    (A ⨝ B) 和 (B ⨝ A) 可以被归类到 [AB] Group 中
+    ([AB] ⨝ C) 可以被归类到[ABC] Group 中
+    其实就是把特定的排列，通过逻辑上的判断相同的排列们收集成一个组合， 这样做的收益可以多想想看
 ```
     
 众说周知，人与人说话都是一门艺术，嫁接到database，他与os 交流也是一门艺术哈哈哈（有点扩展了）
