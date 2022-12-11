@@ -175,11 +175,165 @@ Group: logically equivalent expressions
     (A ⨝ B) 和 (B ⨝ A) 可以被归类到 [AB] Group 中
     ([AB] ⨝ C) 可以被归类到[ABC] Group 中
     其实就是把特定的排列，通过逻辑上的判断相同的排列们收集成一个组合， 这样做的收益可以多想想看
-```
     
+那其实我们发现有一个([AB] ⨝ C) 表达式就会产出，拥有一些group 同时又有算子，看起来和 OptExpression 就很相似，我们把它定义为Muti-Expression
+Multi 代表group 里面会有multi optExpression
+```
+StarRocks 中 Group class 就是定义Group
+StarRocks 中 GroupExpression class 就是在定义 MultiExpression
+```javascript
+ //A group is a set of logically equivalent logical and
+//   physical expressions that produce the same output.
+public class Group {
+    private final int id;
+    private final List<GroupExpression> logicalExpressions;
+    private final List<GroupExpression> physicalExpressions;
+    
+}
+
+public class GroupExpression {
+    // The group this group expression belong to,
+    // will set by setGroup method
+    private Group group;
+    private final List<Group> inputs;
+    private final Operator op;
+}
+```
+
+关于这几个比较绕的概念我举个🌰，自己感受下
+Group : [RS] 为了简化 [R⨝S] 和 [S⨝R]
+GroupExpression : ([RS]⨝T) ，
+所以GroupExpression 类里面拥有一个成员变量Group,  表示 ([RS]⨝T) 这个GroupExpression是属于 Group [RST]的
+ 
+中间状态还是蛮容易表示的，初始状态下，一般来说，Group == Group Expression == OptExpress (R)
+在这里可以计算简单的计算一个小小的题，对于Join来说，table 的数量 N ，和group 的数量对应是多少？如果你能回答上来是 2^N-1 那就说明你懂了,
+因为其实就是在计算
+![img_1.png](../imgs/ss.png)
+这样一个树结构的节点个数，👇是一些数据供参考。
+![img.png](../imgs/rlat.png)
+
+那会有个问题，怎么将一个GroupExpression 变成 一个逻辑上可以相等的 例外一个 GroupExpression ? 很明显我们需要一个Rule ，用rule去匹配，其实就是一种模式匹配。
+事先定义好一些pattern, 满足我这个pattern的就可以使用这个rule做transformation。
+
+```sql
+Rule : GroupExpression(Logical/Physical) <==> GroupExpression(Logical/Physical)
+    也可以看到GroupExpression 分logic 和 physical ，转变的时候apply 的rule 可能不大相似的，为了明确转换的时候，我可以从那种rule 找，简单的
+        给Rule 分个类把
+        
+Rule-Pattern: 每一个Rule 应该长啥样，能匹配输入的Expression  
+```
+StarRocks 中 Rule 相关的定义⬇️
+```javascript
+public enum RuleSetType {
+    // logical expression <==> logical expression
+    LOGICAL_TRANSFORMATION,
+    // logical expression <==> physical expression
+    PHYSICAL_IMPLEMENTATION,
+    
+    // optimial rule definations to rewrite expression 
+    MERGE_LIMIT,
+    PRUNE_COLUMNS,
+    PARTITION_PRUNE,
+    PUSH_DOWN_PREDICATE,
+    SUBQUERY_REWRITE,
+    PUSH_DOWN_SUBQUERY,
+    PRUNE_ASSERT_ROW,
+    MULTI_DISTINCT_REWRITE,
+    AGGREGATE_REWRITE,
+    PRUNE_SET_OPERATOR,
+    PRUNE_PROJECT,
+    COLLECT_CTE,
+    INLINE_CTE,
+}
+// Rule 的抽象
+public abstract class Rule {
+    private final RuleType type;
+    private final Pattern pattern;
+    
+    public abstract List<OptExpression> transform(OptExpression input, OptimizerContext context);
+}
+
+// RuleSet 定义static func ，启动之后就加载Rule在JVM中
+public class RuleSet {
+    // rewrite rule: extend tree 
+    private static final Map<RuleSetType, List<Rule>> REWRITE_RULES = Maps.newHashMap();
+
+    // implemention rule:  logical expression <==> physical expression
+    private static final List<Rule> ALL_IMPLEMENT_RULES = ImmutableList.of(
+        new OlapScanImplementationRule(),
+        new HudiScanImplementationRule(),
+        new SchemaScanImplementationRule(),
+        new MysqlScanImplementationRule(),
+        new HashAggImplementationRule(),
+        new ProjectImplementationRule(),
+        new TopNImplementationRule(),
+        new AssertOneRowImplementationRule(),
+        new WindowImplementationRule(),
+        new UnionImplementationRule(),
+        new ExceptImplementationRule(),
+        new IntersectImplementationRule(),
+        new ValuesImplementationRule(),
+        new RepeatImplementationRule(),
+        new FilterImplementationRule(),
+        new TableFunctionImplementationRule(),
+        new LimitImplementationRule(),
+        new CTEProduceImplementationRule()
+            ...
+    );
+
+    private final List<Rule> implementRules = Lists.newArrayList(ALL_IMPLEMENT_RULES);
+
+    private final List<Rule> transformRules = Lists.newArrayList();
+
+    static {
+        REWRITE_RULES.put(RuleSetType.MERGE_LIMIT, ImmutableList.of(
+            new MergeLimitWithSortRule(),
+            new PushDownLimitJoinRule(),
+            new MergeLimitWithLimitRule(),
+            PushDownLimitDirectRule.PROJECT,
+            PushDownLimitDirectRule.ASSERT_ONE_ROW,
+            PushDownLimitDirectRule.CTE_CONSUME,
+            MergeLimitDirectRule.AGGREGATE,
+            MergeLimitDirectRule.OLAP_SCAN,
+            MergeLimitDirectRule.HUDI_SCAN,
+            MergeLimitDirectRule.SCHEMA_SCAN,
+            MergeLimitDirectRule.ES_SCAN,
+            MergeLimitDirectRule.WINDOW,
+            MergeLimitDirectRule.INTERSECT,
+            MergeLimitDirectRule.EXCEPT,
+            MergeLimitDirectRule.VALUES,
+            MergeLimitDirectRule.FILTER,
+            MergeLimitDirectRule.TABLE_FUNCTION
+                ...
+        ));
+
+        REWRITE_RULES.put(RuleSetType.PARTITION_PRUNE, ImmutableList.of(
+            new PartitionPruneRule(),
+            new DistributionPruneRule(),
+            RemoteScanPartitionPruneRule.HIVE_SCAN,
+            RemoteScanPartitionPruneRule.ICEBERG_SCAN,
+            PushDownMinMaxConjunctsRule.HIVE_SCAN,
+            PushDownMinMaxConjunctsRule.HUDI_SCAN,
+            PushDownMinMaxConjunctsRule.ICEBERG_SCAN,
+            ...
+        ));
+
+        // 基本上👆RuleSetType 都有一系列的RuleSet class 
+}
+
+
+/**
+ * Pattern is used in rules as a placeholder for group
+ */
+public class Pattern {
+    private final OperatorType opType;
+    private final List<Pattern> children;
+}
+```
+![img.png](../imgs/patterms.png)
+
+那其实讲到这里，我们发现我们原始的query tree 变成 OptExpression 之后通过match rule pattern  可以做很多等价转换，同时也可以做
+rewrite，但是真正的目的还没开始呢，我们要找到一个"最优"的 exec plan 呢
+
 众说周知，人与人说话都是一门艺术，嫁接到database，他与os 交流也是一门艺术哈哈哈（有点扩展了）
 
-Velox(presto/spark):
-DB2(OLTP):
-StarRocks(OLAP):
-ArangoDb(graph):
