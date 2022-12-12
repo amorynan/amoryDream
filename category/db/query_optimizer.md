@@ -4,7 +4,7 @@ SQL ->> QUERY-OPTIMIZER ->> PLAN(s) ->> MACHINE(multi core|mem|disk)
 
 序：
     QUERY-OPTIMIZER 在👆的流程图可以看得出来，在数据库中扮演着 🧠 的位置，不管是OLAP， OLTP，HTAP 都会有不同实现方案，随着时间的推进，
-一些优秀的思想和框架在时间的沉淀下，也慢慢占有他们的一席之地。本篇只是想以我浅薄的认知去以洞见一些优化器的本质。
+一些优秀的思想和框架在时间的沉淀下，也慢慢占有他们的一席之地。本篇只是想以我浅薄的认知去以洞见一些优化器的本质。内容会包含算法思想，数据结构。
 
 1. SQL 的 何去何从?:
    ![img.png](../imgs/sqls.png)
@@ -332,8 +332,92 @@ public class Pattern {
 ```
 ![img.png](../imgs/patterms.png)
 
+这里埋下一个伏笔，给定一个OptExpression ，如果再给多个pattern ，会不会有多个 OptExpression 输出？(这里涉及到的算法是两棵树的匹配原则，所以树的算法还是很重要的，理解代码会比较容易些)
+就比如：
+```javascript
+ /*
+     * Example:
+     *        JOIN(j)        (Group...)
+     *        /    \
+     *    SCAN      SCAN     (Group...)
+     *   /  |  \    /    \
+     *  a   b  c   d      e  (GroupExpressions...)
+     *
+     * Pattern:
+     *      JON
+     *     /   \
+     * SCAN     SCAN
+     *
+     * will match first: jad
+     * next: jae, jbd, jbe....
+     */
+
+简化出来的算法模型就是给你两颗树， groupExpression 和 pattern 树，能输出多少个match 的子树？
+```
+
+
 那其实讲到这里，我们发现我们原始的query tree 变成 OptExpression 之后通过match rule pattern  可以做很多等价转换，同时也可以做
-rewrite，但是真正的目的还没开始呢，我们要找到一个"最优"的 exec plan 呢
+rewrite，但是真正的目的还没开始呢，我们要找到一个"最优"的 exec plan(执行计划，或者上文提到的物理表达式physical expression) 呢。
+最优问题？是不是能勾起coder 关于dp，backtrack，greedy啥的一些神经？其实把问题简化成算法题也就是怎么从一组复杂的 exec plan 中选出最优的 exec plan
+既然说到最优，那最优的标准是什么？怎么衡量这个 exec plan？
+做法还是挺多的，业界比较标准判断是对于每个算子Operator 计算它的cpu占有时间，内存使用情况，和网络io
+
+比如StarRocks 
+```javascript
+public class CostEstimate {
+    private final double cpuCost;
+    private final double memoryCost;
+    private final double networkCost;
+    private static final CostEstimate ZERO = new CostEstimate(0, 0, 0);
+}
+```
+那有了因素，需要思考如何给这些因素进行加权，获得一个相对比较标准的结果。
+```javascript
+    // 基本上是这样的比例，至于说为什么，因为
+    public static double getRealCost(CostEstimate costEstimate) {
+        double cpuCostWeight = 0.5;
+        double memoryCostWeight = 2;
+        double networkCostWeight = 1.5;
+        return costEstimate.getCpuCost() * cpuCostWeight +
+                costEstimate.getMemoryCost() * memoryCostWeight +
+                costEstimate.getNetworkCost() * networkCostWeight;
+    }
+```
+
+关于cost 计算其实又是一个比较大的话题，也是比较重要的因素，因为它直接能判断一个计划好不好，但是它又有很大局限性，比如没有考虑算子之间的相关性，具体可以看👇的一个思考。
+```sql
+DB:automobiles:→ 
+    TABLE Makes 有 10 个
+    TABLE Models 有 100 个
+    
+Following query:→ (make="Honda" AND model="Accord")
+假设查询Operator 之间独立 没有相关行: 
+the selectivity is: scan(makes) * scan(models)
+    1/10 × 1/100 = 0.001
+但是如果Models 中 Accord 对应的 make 只有 Honda 
+那 selectivity is 1/100 = 0.01
+```
+关于cost model的具体计算方案，给自己留个坑以后将，本篇还是主力讲一下整体查询优化的过程和工业界的实践吧.👇简单给一个粗粒度的optimal plan的cost 样子打打版
+![img.png](../imgs/img_12.png)
+
+现在我们或多或少拥有一些 expression，那我们第一步得找个数据结构(公共的空间)存下来吧，这个空间我们叫做 Search Space, 在StarRocks 中用 Memo class 定义
+```javascript
+public class Memo {
+    private int nextGroupId = 0;
+    // The group id is same with the group index in groups List
+    private final List<Group> groups;
+    private Group rootGroup;
+    /**
+     * The map value is root group id for the GroupExpression.
+     * We need to store group id because when {@see insertGroupExpression}
+     * we need to get existed group id for tmp GroupExpression,
+     * which doesn't have group id info
+     */
+    private final Map<GroupExpression, GroupExpression> groupExpressions;
+}
+```
+写过dp 的人应该对memo 都有所了解吧，算法的结果缓存。 有了memo 其实就能更好的做group pruning
+
 
 众说周知，人与人说话都是一门艺术，嫁接到database，他与os 交流也是一门艺术哈哈哈（有点扩展了）
 
