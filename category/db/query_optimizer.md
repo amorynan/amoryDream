@@ -417,7 +417,151 @@ public class Memo {
 }
 ```
 写过dp 的人应该对memo 都有所了解吧，算法的结果缓存。 有了memo 其实就能更好的做group pruning
+那么现在可以在脑子里面有一个动态的方向就是，从最初始化的expression, 封装成groupExpression 加入memo中。这一步我们定义一个function 叫CopyIn(TargetGroup, OptExpression)
+就代表需要把那个OptExpression 加入到哪个Group 中？如果之前OptExpression 出现过，就不用加， 具体算法如下
+```javascript
+    public Pair<Boolean, GroupExpression> copyIn(Group targetGroup, OptExpression expression) {
+        List<Group> inputs = Lists.newArrayList();
+        for (OptExpression input : expression.getInputs()) {
+            Group group;
+            // 看看当前的optExpression 子孩纸（input）的 Group 是否存在？
+            if (input.getGroupExpression() != null) {
+                // 存在直接加入即可
+                group = input.getGroupExpression().getGroup();
+            } else {
+                group = copyIn(null, input).second.getGroup();
+            }
+            Preconditions.checkState(group != null);
+            Preconditions.checkState(group != targetGroup);
+            inputs.add(group);
+        }
+        // 然后把当前的GroupExpression 
+        GroupExpression groupExpression = new GroupExpression(expression.getOp(), inputs);
+        Pair<Boolean, GroupExpression> result = insertGroupExpression(groupExpression, targetGroup);
+        if (result.first && targetGroup == null) {
+            // For new group, we need drive property from expression
+            // add set it to new group
+            Preconditions.checkState(result.second.getOp().isLogical());
+            result.second.deriveLogicalPropertyItself();
 
+            // For multi join reorder,
+            // We have derived statistics In ReorderJoinRule
+            result.second.getGroup().setStatistics(expression.getStatistics());
+        }
+        return result;
+    }
+```
+这里就截图看看大致计算流程把(看图可能比文字更清楚)
+![img.png](../imgs/1.png)
+![img.png](../imgs/2.png)
+![img.png](../imgs/3.png)
+![img.png](../imgs/4.png)
+![img.png](../imgs/5.png)
+![img.png](../imgs/6.png)
+![img.png](../imgs/7.png)
+![img.png](../imgs/8.png)
+![img.png](../imgs/9.png)
+![img.png](../imgs/10.png)
+![img.png](../imgs/11.png)
+![img.png](../imgs/12.png)
+![img.png](../imgs/13.png)
+![img.png](../imgs/14.png)
+![img.png](../imgs/15.png)
+![img.png](../imgs/16.png)
 
-众说周知，人与人说话都是一门艺术，嫁接到database，他与os 交流也是一门艺术哈哈哈（有点扩展了）
+有了👆 知识的基础，现在再来看下优化流程就会相对轻松很多，主要是在 Optimizer 的 optimize func 中
+整体的流程图
+![img.png](../imgs/17.png)
+看流程图是非常简单的是吧，因为我们其实省略了很多的细节，但是这个图对于每一个步骤都分成了对应的task，为什么要把步骤 作为 task 呢？
+想象一下，如果不是task 的话，就会在代码中写很多函数的调用逻辑，但从这一点看，task 的抽取还是很有效果的，同时如果提前拥有一个上下文那么可以利用
+Graph来标明具体task 他们之间的拓扑和依赖关系，也可以更好的LIFO堆栈结构进行管理，更容易的根据启发式指引方式进行排序和调整，最后一个是也许可以进行并行计算
+
+StarRocks 定义的Task：
+![img.png](../imgs/18.png)
+可以看到其实就是把优化的过程具体分成了几个大方向（大步骤），每个大步骤都可以有自己执行方式和同时task 之间也会经常进行调用。
+
+最后再让我们高屋建瓴的看一下入口函数吧
+```javascript
+    /**
+     * Optimizer will transform and implement the logical operator based on
+     * the {@see Rule}, then cost the physical operator, and finally find the
+     * lowest cost physical operator tree
+     *
+     * @param logicOperatorTree the input for query Optimizer
+     * @param requiredProperty  the required physical property from sql or groupExpression
+     * @param requiredColumns   the required output columns from sql or groupExpression
+     * @return the lowest cost physical operator for this query
+     */
+    public OptExpression optimize(ConnectContext connectContext,
+                                  OptExpression logicOperatorTree,
+                                  PhysicalPropertySet requiredProperty,
+                                  ColumnRefSet requiredColumns,
+                                  ColumnRefFactory columnRefFactory) {
+        // Phase 1: none
+        OptimizerTraceUtil.logOptExpression(connectContext, "origin logicOperatorTree:\n%s", logicOperatorTree);
+        // Phase 2: rewrite based on memo and group
+        Memo memo = new Memo();
+
+        context = new OptimizerContext(memo, columnRefFactory, connectContext);
+        context.setTraceInfo(new OptimizerTraceInfo(connectContext.getQueryId()));
+        // 统一用一个task context 方式管理 优化过程中存在 task 可以生成的 optExpression 或者一些额外的信息
+        TaskContext rootTaskContext =
+                new TaskContext(context, requiredProperty, requiredColumns.clone(), Double.MAX_VALUE);
+
+        // 这里会将原始的OptExpression 通过各种可以 rewrite 的规则进行匹配, 然后更新到 rootTaskContext   
+        logicOperatorTree = logicalRuleRewrite(logicOperatorTree, rootTaskContext);
+
+        // 把最原始logOperatorTree 封装成 OptExpression 同时有对应的GroupExpression 和 Rule 放入到memo 中
+        memo.init(logicOperatorTree);
+        OptimizerTraceUtil.log(connectContext, "after logical rewrite, root group:\n%s", memo.getRootGroup());
+
+        // collect all olap scan operator
+        collectAllScanOperators(memo, rootTaskContext);
+
+        // Currently, we cache output columns in logic property.
+        // We derive logic property Bottom Up firstly when new group added to memo,
+        // but we do column prune rewrite top down later.
+        // So after column prune rewrite, the output columns for each operator maybe change,
+        // but the logic property is cached and never change.
+        // So we need to explicitly derive all group logic property again
+       // 将OptExpression 的 logic properties (比如需要哪些列）补充完整
+        memo.deriveAllGroupLogicalProperty();
+
+        // Phase 3: optimize based on memo and group
+        // 这里是主要在做逻辑表达式的优化
+        // 主要是执行OptimizeGroupTask， Optimize a group within a given context.
+        memoOptimize(connectContext, memo, rootTaskContext);
+
+        OptExpression result;
+        if (!connectContext.getSessionVariable().isSetUseNthExecPlan()) {
+            // 获得'最优'的 exec plan，这里主要在做物理表达式的优化
+            result = extractBestPlan(requiredProperty, memo.getRootGroup());
+        } else {
+            // extract the nth execution plan
+            int nthExecPlan = connectContext.getSessionVariable().getUseNthExecPlan();
+            result = EnumeratePlan.extractNthPlan(requiredProperty, memo.getRootGroup(), nthExecPlan);
+        }
+        OptimizerTraceUtil.logOptExpression(connectContext, "after extract best plan:\n%s", result);
+
+        // set costs audio log before physicalRuleRewrite
+        // statistics won't set correctly after physicalRuleRewrite.
+        // we need set plan costs before physical rewrite stage.
+        // 计算一些cost
+        final CostEstimate costs = Explain.buildCost(result);
+        connectContext.getAuditEventBuilder().setPlanCpuCosts(costs.getCpuCost())
+                .setPlanMemCosts(costs.getMemoryCost());
+
+        OptExpression finalPlan = physicalRuleRewrite(rootTaskContext, result);
+        OptimizerTraceUtil.logOptExpression(connectContext, "final plan after physical rewrite:\n%s", finalPlan);
+        OptimizerTraceUtil.log(connectContext, context.getTraceInfo());
+        return finalPlan;
+    }
+
+```
+基本上到此为止也能理清楚一些概念和梳理一些工业界对照的代码，值得一提的是 StarRocks 目前基本上按照 Columbia 论文的原理进行实现的。
+其实我的这篇blog里面还有很多算法上的细节没有扣，比如在expression 做 rewrite 这类似rule 的transformation的时候，需要遵循哪些规则？在做优化过程中对于每一个Group 其实可以有一个 Low Bound Cost 
+计算当前OptExpression 的下限，目的是可以做剪枝用，就相当于你在写递归函数的时候，发现某些条件不满足，直接return，不对他扩展等，不过我的目的是为了由浅入深，深入的研究还是需要自己看代码理解，看完我的
+blog 至少在看代码的时候不会看一眼就关掉idea了把哈哈哈，当然我还是很推荐自己去看看Columbia论文的，地址在这里https://github.com/yongwen/columbia/tree/master/thesis, 拿走不谢
+
+写完一篇blog 其实自己收获应该是最多的，比如这个时候我就在想，人与人说话都是一门艺术，嫁接到database，他与os 交流也是一门艺术哈哈哈（有点扩展了）
 
