@@ -5,26 +5,9 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="936abf31-b839-4bed-a839-a5d2284b2c58" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/category/imgs/1.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/category/imgs/10.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/category/imgs/11.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/category/imgs/12.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/category/imgs/13.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/category/imgs/14.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/category/imgs/15.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/category/imgs/16.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/category/imgs/17.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/category/imgs/18.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/category/imgs/2.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/category/imgs/3.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/category/imgs/4.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/category/imgs/5.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/category/imgs/6.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/category/imgs/7.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/category/imgs/8.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/category/imgs/9.png" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/category/db/query_optimizer.md" beforeDir="false" afterPath="$PROJECT_DIR$/category/db/query_optimizer.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/category/db/data_layout.md" beforeDir="false" afterPath="$PROJECT_DIR$/category/db/data_layout.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/main.go" beforeDir="false" afterPath="$PROJECT_DIR$/main.go" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
