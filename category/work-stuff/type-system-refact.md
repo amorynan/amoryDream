@@ -14,21 +14,23 @@
        可以解决嵌套类型反序列化
        可以解决去掉wrapField，使用deserialize_column_from_text()加上setting ，jingjing
 ### TODO Staff
-   [x] Serde： 加上 deserialize_column_from_text(), 先不考虑 serialize_to_text() ，需要梳理整体doris中 to_string 的定义
-   [x] function_cast 调用 data_type_to->from_string(readbuffer, column) 改成 data_type_to->get_serde()->deserialize_column_from_text(readerbuffer, column, format_setting)
-   [x] 对于WrapperField 的优化思路：（需要UT 验证一下OlapField from/to_string VS data_type from/to_string 行为一致性，如果不一致，就在）
-   
+* [ ] Serde： 加上 deserialize_column_from_text(), 先不考虑 serialize_to_text() ，需要梳理整体doris中 to_string 的定义
+
+* [ ]  function_cast 调用 data_type_to->from_string(readbuffer, column) 改成 data_type_to->get_serde()->deserialize_column_from_text(readerbuffer, column, format_setting)
+
+* [ ]  对于WrapperField 的优化思路：（需要UT 验证一下OlapField from/to_string VS data_type from/to_string 行为一致性，如果不一致，就在） 
+```javascript
 A. column_reader -> page_zoneMap (bytes(min, max))
    ->  (Min, Max)WrapperField.from_string()    ==> data_type->get_field(core)
-   -> Field(Olap).from_string()                            ==> data_type->get_serde.deserialize_field_from_text(readBuffer, Field, setting)
-   
+   -> Field(Olap).from_string()                ==> data_type->get_serde.deserialize_field_from_text(readBuffer, Field, setting)
 B. column_mapping 替换 wrapperField 到 Field （default_value）
    从而 schema_change.cpp 也能改掉
-   
 C. 修改各种 xxx_predict中的WrapperField
-1. BlockColumnPredicate evaluate_and()
-2. ColumnPredicate evaluate_and() / evaluate_del()
-   accep_null/comparison/in_list/null/bitmapFilter
+    1. BlockColumnPredicate evaluate_and()
+    2. ColumnPredicate evaluate_and() / evaluate_del()
+        accep_null/comparison/in_list/null/bitmapFilter
+```
 ### Check
    function_cast 支持 嵌套类型
+
    stream_load 支持嵌套输入，以及前后需要一个速度的对比（包含scala类型）
